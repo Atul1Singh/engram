@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: engram-config
+  namespace: engram
+data:
+  ENGRAM_SESSION_COMPACTION_TRIGGER_TOKENS: "64000"
+  ENGRAM_SESSION_COMPACTION_TARGET_RATIO: "0.5"
+  ENGRAM_SESSION_COMPACTION_INPUT_TOKENS: "64000"
+  ENGRAM_SESSION_COMPACTION_SUMMARY_TOKENS: "2000"
+  ENGRAM_RETRIEVAL_QUALITY_MODE: "enforce"
+  config.yaml: |
+    api:
+      host: "0.0.0.0"
+      port: 8000
+      api_key: ${ENGRAM_API_KEY}
+      admin_key: ${ENGRAM_ADMIN_KEY}
+      rate_limit_query_per_minute: 120
+      rate_limit_ingest_per_minute: 600
+
+    gating:
+      configuration: "dual"
+      classifier_path: "/models/engram-gate-v1"
+      embedding_model_path: "BAAI/bge-small-en-v1.5"
+      classification_threshold: 0.3
+      device: "cpu"
+      max_batch_size: 32
+      memory_hit_threshold: 0.75
+
+    core_model:
+      provider: "openai_responses"
+      model_path: "muse-spark-1.3-contributor"
+      api_base: "https://opencode.ai/zen/go/v1"
+      api_key: ${OPENCODE_GO_API_KEY}
+      temperature: 1.0
+      max_tokens: 2048
+      timeout_seconds: 60
+
+    frontier_llm:
+      provider: "openai_responses"
+      model_path: "muse-spark-1.3-contributor"
+      api_base: "https://opencode.ai/zen/go/v1"
+      api_key: ${OPENCODE_GO_API_KEY}
+      temperature: 1.0
+      max_tokens: 4096
+      reasoning_effort: "low"
+
+    filesystem:
+      data_dir: "/var/lib/engram/export"
+      create_dirs: false
+      tree_display_max_tokens: 2048
+
+    canonical_memory:
+      enabled: true
+      require_temporal: true
+      allow_filesystem_runtime: false
+      legacy_uri_status_code: 410
+      artifact_retention_hours: 24
+
+    knowledge_graph:
+      backend: "neo4j"
+      uri: "bolt://neo4j.engram.svc.cluster.local:7687"
+      writer_username: "neo4j"
+      writer_password: ${NEO4J_ADMIN_PASSWORD}
+      reader_username: "neo4j"
+      reader_password: ${NEO4J_ADMIN_PASSWORD}
+      l2_query_timeout_seconds: 5
+      l4_query_timeout_seconds: 15
+      max_hops: 4
+
+    event_ledger:
+      backend: "postgres"
+      dsn: ${ENGRAM_DATABASE_URL}
+      reconciliation_interval_seconds: 60
+      stale_overview_scan_interval_seconds: 86400
+
+    temporal:
+      enabled: true
+      address: "temporal-frontend.temporal.svc.cluster.local:7233"
+      namespace: "engram-prod"
+      ingest_task_queue: "engram-ingest"
+      code_ingest_task_queue: "engram-code-ingest"
+      projection_task_queue: "engram-projection"
+      consolidation_task_queue: "engram-consolidation"
+      maintenance_task_queue: "engram-maintenance"
+      worker_concurrency: 4
+      maintenance_worker_concurrency: 1
+      dispatch_interval_seconds: 1.0
+
+    consolidation:
+      poll_interval_seconds: 10
+      max_concurrent_tasks: 4
+      overview_max_tokens: 2048
+      overview_debounce_seconds: 30
+      manifest_update_delay_seconds: 5
+      max_backlog: 10000
+
+    session_cache:
+      backend: "redis"
+      redis_url: "redis://redis.engram.svc.cluster.local:6379"
+
+    retrieval:
+      quality_mode: enforce
+      l0_skip: false
+      max_reentries: 2
+      max_depth: "L4"
+      max_l1_vector_results: 30
+      overview_budget_tokens: 6000
+      full_doc_budget_tokens: 20000
+      msc_compression_threshold: 0.8
+
+    decay:
+      preset: "personal_conversation"
+      schedule: "0 3 * * *"
+      schedule_timezone: "UTC"
+      dormant_floor: 0.05
+
+    session:
+      timeout_minutes: 30
+      compaction_trigger_tokens: 64000
+      compaction_target_ratio: 0.5
+      compaction_input_tokens: 64000
+      compaction_summary_tokens: 2000

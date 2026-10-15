@@ -1,0 +1,147 @@
+"""Prometheus metrics (§13.2).
+
+Exposed via `/metrics` in plain text format. A subset of the SDD's required
+metrics is emitted; the rest become meaningful only once we have real
+traffic and will be added as their values become observable.
+"""
+
+from __future__ import annotations
+
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
+
+REGISTRY = CollectorRegistry()
+
+session_compaction_outcomes = Counter("engram_session_compaction_total",
+    "Session compaction outcomes.", ["outcome"], registry=REGISTRY)
+session_compaction_tokens = Histogram("engram_session_compaction_context_tokens",
+    "Active session tokens before and after compaction.", ["phase"],
+    buckets=(1000, 6000, 16000, 32000, 64000, 128000), registry=REGISTRY)
+session_compaction_latency = Histogram("engram_session_compaction_seconds",
+    "Session compaction duration including summary generation.", registry=REGISTRY)
+
+# Query / ingest pipeline latencies
+query_latency = Histogram(
+    "engram_query_latency_seconds",
+    "Per-phase latency for query requests.",
+    ["phase"],
+    registry=REGISTRY,
+)
+ingest_stage = Histogram(
+    "engram_ingest_pipeline_stage_seconds",
+    "Per-step duration in the ingest pipeline.",
+    ["stage"],
+    registry=REGISTRY,
+)
+query_depth_predicted_vs_reached = Counter(
+    "engram_query_depth_predicted_vs_reached",
+    "Counter of predicted_depth vs actual terminal depth.",
+    ["predicted", "reached"],
+    registry=REGISTRY,
+)
+reentries_per_query = Histogram(
+    "engram_reentries_per_query",
+    "Number of frontier re-entries per query.",
+    buckets=(0, 1, 2, 3),
+    registry=REGISTRY,
+)
+l0_gate_decisions = Counter(
+    "engram_l0_gate_decisions",
+    "Outcome of the L0 gate.",
+    ["decision", "reason"],
+    registry=REGISTRY,
+)
+ingest_events_total = Counter(
+    "engram_ingest_events_total",
+    "Counter of ingest events by final status.",
+    ["final_status"],
+    registry=REGISTRY,
+)
+core_model_calls = Counter(
+    "engram_core_model_calls_total",
+    "Calls per Core Model task.",
+    ["task", "provider"],
+    registry=REGISTRY,
+)
+frontier_tokens = Counter(
+    "engram_frontier_tokens_total",
+    "Frontier LLM tokens in/out.",
+    ["direction"],
+    registry=REGISTRY,
+)
+canonical_mutations = Counter(
+    "engram_canonical_mutations_total",
+    "Canonical PostgreSQL mutations by type and outcome.",
+    ["mutation_type", "outcome"],
+    registry=REGISTRY,
+)
+canonical_commit_latency = Histogram(
+    "engram_canonical_commit_seconds",
+    "Duration of canonical PostgreSQL commit transactions.",
+    ["mutation_type"],
+    registry=REGISTRY,
+)
+projection_retries = Counter(
+    "engram_projection_retries_total",
+    "Temporal projection activity retries by failure class.",
+    ["failure_class"],
+    registry=REGISTRY,
+)
+canonical_verification_rejections = Counter(
+    "engram_canonical_verification_rejections_total",
+    "Discovery candidates rejected by PostgreSQL verification.",
+    ["reason"],
+    registry=REGISTRY,
+)
+answerability = Counter(
+    "engram_retrieval_answerability_total",
+    "Retrieval evidence-gate outcomes.",
+    ["state"],
+    registry=REGISTRY,
+)
+
+# Gauges
+consolidation_queue_depth = Gauge(
+    "engram_consolidation_queue_depth",
+    "Current consolidation queue depth.",
+    registry=REGISTRY,
+)
+kg_node_count = Gauge("engram_kg_node_count", "KG node count.", registry=REGISTRY)
+kg_edge_count = Gauge("engram_kg_edge_count", "KG edge count.", registry=REGISTRY)
+projection_dispatch_depth = Gauge(
+    "engram_projection_dispatch_depth",
+    "Pending or active projection dispatches.",
+    registry=REGISTRY,
+)
+dead_dispatch_depth = Gauge(
+    "engram_dead_dispatch_depth",
+    "Temporal workflow dispatches quarantined after terminal failure",
+    ["workflow_type"],
+    registry=REGISTRY,
+)
+oldest_projection_age = Gauge(
+    "engram_oldest_projection_age_seconds",
+    "Age of the oldest pending projection dispatch.",
+    registry=REGISTRY,
+)
+projection_revision_lag = Gauge(
+    "engram_projection_revision_lag",
+    "Canonical revision minus projected Neo4j revision.",
+    registry=REGISTRY,
+)
+filesystem_runtime_access = Counter(
+    "engram_filesystem_runtime_access_total",
+    "Filesystem memory accesses attempted after canonical cutover.",
+    ["operation"],
+    registry=REGISTRY,
+)
+
+
+def render_latest() -> tuple[bytes, str]:
+    return generate_latest(REGISTRY), CONTENT_TYPE_LATEST

@@ -1,0 +1,54 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.envrc
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.DS_Store
+
+# Engram runtime state (anchored to repo root so it does not swallow
+# engram/models/*, which is the models source tree).
+/data/
+/models/
+/logs/
+
+# Sisyphus agent workspace
+.sisyphus/
+
+# Playwright / browser automation
+.playwright-mcp/
+
+# Node modules (for clients/)
+node_modules/
+package-lock.json
+
+# Local screenshots / debug artifacts
+*.png
+*_scope_check.*
+
+# Runtime artifacts
+chromedriver
+event_ledger.db
+
+# benchmark run outputs
+benchmarks/results/
+
+# Generated reports, backup archives, and document lock files
+/artifacts/
+/qa-artifacts/
+/engram-*.zip
+.~lock.*#

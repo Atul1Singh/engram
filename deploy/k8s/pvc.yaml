@@ -1,0 +1,25 @@
+# Neo4j and Redis are rebuildable projections/caches. PostgreSQL storage and
+# PITR are managed by the database platform, outside this workload chart.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neo4j-data
+  namespace: engram
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ssd
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: engram
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ssd
+  resources:
+    requests:
+      storage: 20Gi
